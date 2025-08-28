@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FungiScope Day 0 / Case Timeline Calculator</title>
+  <style>
+    :root{--bg:#0b1020;--card:#121833;--muted:#b7c1ff;--text:#eaf0ff;--accent:#7aa2ff;--accent2:#a6ffda;--danger:#ff9aaa}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:linear-gradient(180deg,#0b1020 0%, #0f1230 100%);color:var(--text)}
+    .container{max-width:1100px;margin:0 auto;padding:28px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.12);box-shadow:0 10px 30px rgba(0,0,0,0.25);backdrop-filter:blur(6px);border-radius:18px;padding:20px}
+    h1{font-size:clamp(22px,3vw,30px);margin:0 0 8px}
+    p.sub{margin:4px 0 16px;color:var(--muted)}
+    .row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input[type="date"], input[type="text"], input[type="number"], select{background:#0f1530;color:var(--text);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:10px 12px;outline:none;min-height:40px}
+    input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus{border-color:var(--accent)}
+    .btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer;transition:transform .05s ease, box-shadow .2s}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),#5c7dff);color:#041127;box-shadow:0 6px 20px rgba(122,162,255,.35)}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.16);color:var(--text)}
+    .btn-danger{background:linear-gradient(135deg,#ff6b8a,var(--danger));color:#2b0e16}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:12px}
+    thead th{position:sticky;top:0;background:#0f1633;z-index:1}
+    th, td{border-bottom:1px solid rgba(255,255,255,.1);padding:10px;text-align:left}
+    tr:hover td{background:rgba(255,255,255,.03)}
+    .tag{display:inline-flex;align-items:center;gap:6px;background:rgba(122,162,255,.16);color:var(--accent2);border:1px solid rgba(122,162,255,.35);padding:6px 10px;border-radius:999px;font-size:12px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .col-6{grid-column:span 6}
+    .col-12{grid-column:span 12}
+    @media (max-width:900px){.col-6{grid-column:span 12}}
+    .help{font-size:12px;color:var(--muted)}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;border:1px solid rgba(255,255,255,.2);padding:0 6px;border-radius:6px}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px;color:var(--muted)}
+    .footer{margin-top:16px;font-size:12px;color:var(--muted)}
+    .sep{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);margin:16px 0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <h1>FungiScope® Day 0 / Case Timeline Calculator</h1>
+          <p class="sub">Quickly convert calendar dates to relative study days and vice versa. No data is uploaded; everything runs locally in your browser.</p>
+        </div>
+        <div class="tag" title="Browser timezone used for calculations">Timezone: <strong id="tz"></strong></div>
+      </div>
+
+      <div class="grid">
+        <div class="col-6">
+          <label for="day0">Day 0 (earliest confirmation of IC/C)</label>
+          <input id="day0" type="date" />
+          <div class="help">Tip: You can share a link with pre‑filled Day 0 using the copy link button below.</div>
+        </div>
+        <div class="col-6">
+          <label for="localeSel">Language</label>
+          <select id="localeSel">
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row">
+        <div>
+          <label>New event label</label>
+          <input id="labelInput" type="text" placeholder="e.g., Blood culture collected" />
+        </div>
+        <div>
+          <label>Event date</label>
+          <input id="dateInput" type="date" />
+        </div>
+        <button class="btn btn-primary" id="addRowBtn" title="Add row (Ctrl+Enter)">Add</button>
+        <button class="btn btn-ghost" id="addDayBtn" title="Compute calendar date from relative day">From relative day…</button>
+      </div>
+
+      <table id="eventsTable">
+        <thead>
+          <tr>
+            <th style="width:32px">#</th>
+            <th>Label</th>
+            <th>Date</th>
+            <th>Relative day</th>
+            <th style="width:160px">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="sep"></div>
+
+      <div class="toolbar">
+        <button class="btn btn-ghost" id="copyTable">Copy summary</button>
+        <button class="btn btn-ghost" id="exportCSV">Export CSV</button>
+        <button class="btn btn-ghost" id="copyLink">Copy link with Day 0</button>
+        <button class="btn btn-danger" id="clearAll">Clear all</button>
+      </div>
+
+      <div class="footer">
+        <div>Shortcuts: <span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> add row · <span class="kbd">Ctrl</span> + <span class="kbd">L</span> focus Day 0 · <span class="kbd">Del</span> deletes focused row</div>
+        <div style="margin-top:6px">Definition note: In this campaign, Day 0 is the date of the earliest confirmation of invasive candidiasis/candidemia (e.g., first lab evidence such as “yeast” reported by microbiology that triggers therapy).</div>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="fromDayDialog">
+    <form method="dialog" style="background:#0f1530;color:var(--text);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:20px;min-width:300px">
+      <h3 style="margin-top:0">Compute calendar date from relative day</h3>
+      <p class="muted" style="margin-top:-6px">Enter a label and a relative day (e.g., -3 or +14). We’ll add a row with the computed calendar date.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:12px 0 16px">
+        <div>
+          <label>Label</label>
+          <input id="fromDayLabel" type="text" placeholder="e.g., End of therapy" />
+        </div>
+        <div>
+          <label>Relative day</label>
+          <input id="fromDayValue" type="number" step="1" placeholder="e.g., 14" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" value="cancel">Cancel</button>
+        <button class="btn btn-primary" value="ok">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="rowTpl">
+    <tr>
+      <td class="idx"></td>
+      <td><input class="lbl" type="text" placeholder="Label" /></td>
+      <td><input class="dt" type="date" /></td>
+      <td class="rd"><span class="pill">Day <strong>0</strong></span></td>
+      <td>
+        <button class="btn btn-ghost act-copy" title="Copy 'Day ±X'">Copy</button>
+        <button class="btn btn-ghost act-dup" title="Duplicate row">Duplicate</button>
+        <button class="btn btn-danger act-del" title="Delete row">Delete</button>
+      </td>
+    </tr>
+  </template>
+
+  <script>
+    const $ = (s, el=document) => el.querySelector(s);
+    const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+
+    const day0El = $('#day0');
+    const tzEl = $('#tz');
+    const tableBody = $('#eventsTable tbody');
+    const labelInput = $('#labelInput');
+    const dateInput = $('#dateInput');
+    const addRowBtn = $('#addRowBtn');
+    const addDayBtn = $('#addDayBtn');
+    const copyTableBtn = $('#copyTable');
+    const exportCSVBtn = $('#exportCSV');
+    const copyLinkBtn = $('#copyLink');
+    const clearAllBtn = $('#clearAll');
+    const dialog = $('#fromDayDialog');
+    const fromDayLabel = $('#fromDayLabel');
+    const fromDayValue = $('#fromDayValue');
+    const localeSel = $('#localeSel');
+
+    // Init timezone label
+    tzEl.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local';
+
+    // Helpers
+    function toDateOnly(d){ // normalize to local date-only (midnight)
+      if (!d) return null;
+      const dt = new Date(d);
+      return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    }
+    function fmtISO(d){
+      if (!d) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const da = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${da}`;
+    }
+    function diffDays(a,b){ // b - a, in days (date-only)
+      const ms = toDateOnly(b) - toDateOnly(a);
+      return Math.round(ms / 86400000);
+    }
+    function addDays(d, n){
+      const base = toDateOnly(d);
+      const res = new Date(base);
+      res.setDate(res.getDate()+Number(n));
+      return res;
+    }
+
+    function updateQuery(){
+      const d0 = day0El.value;
+      const url = new URL(location.href);
+      if (d0) url.searchParams.set('day0', d0); else url.searchParams.delete('day0');
+      history.replaceState(null,'',url);
+    }
+
+    function computeRow(tr){
+      const d0 = day0El.valueAsDate;
+      const dt = $('.dt', tr).valueAsDate;
+      const cell = $('.rd', tr);
+      if (!d0 || !dt){ cell.innerHTML = '<span class="muted">—</span>'; return; }
+      const rel = diffDays(d0, dt);
+      const sign = rel>0?'+':'';
+      cell.innerHTML = `<span class="pill">Day <strong>${sign}${rel}</strong></span>`;
+      tr.dataset.rel = rel;
+    }
+    function renumber(){
+      $$('#eventsTable tbody tr').forEach((tr,i)=>{ $('.idx', tr).textContent = i+1; });
+    }
+    function addRow(lbl='', dateStr=''){
+      const tpl = $('#rowTpl').content.cloneNode(true);
+      const tr = tpl.querySelector('tr');
+      $('.lbl', tr).value = lbl;
+      $('.dt', tr).value = dateStr;
+      // Events
+      $('.dt', tr).addEventListener('input', ()=>computeRow(tr));
+      $('.lbl', tr).addEventListener('input', ()=>{});
+      $('.act-del', tr).addEventListener('click', ()=>{ tr.remove(); renumber(); });
+      $('.act-dup', tr).addEventListener('click', ()=>{
+        addRow($('.lbl', tr).value, $('.dt', tr).value);
+      });
+      $('.act-copy', tr).addEventListener('click', async()=>{
+        const rel = tr.dataset.rel ?? '';
+        if (rel==='') return;
+        const sign = rel>0?'+':'';
+        await navigator.clipboard.writeText(`Day ${sign}${rel}`);
+        flash(btn= $('.act-copy', tr));
+      });
+      tableBody.appendChild(tr);
+      computeRow(tr);
+      renumber();
+    }
+
+    function flash(btn){
+      const old = btn.textContent; btn.textContent = 'Copied!';
+      setTimeout(()=>btn.textContent = old, 900);
+    }
+
+    // Toolbar actions
+    addRowBtn.addEventListener('click', ()=>{
+      addRow(labelInput.value.trim(), dateInput.value);
+      labelInput.value=''; dateInput.value='';
+      labelInput.focus();
+    });
+    addDayBtn.addEventListener('click', ()=>{
+      if (!day0El.value){ alert('Please set Day 0 first.'); return; }
+      dialog.showModal();
+      fromDayLabel.value=''; fromDayValue.value='';
+      setTimeout(()=>fromDayLabel.focus(), 50);
+    });
+    dialog.addEventListener('close', ()=>{
+      if (dialog.returnValue !== 'ok') return;
+      const lbl = fromDayLabel.value.trim() || 'Event';
+      const rel = parseInt(fromDayValue.value,10);
+      if (Number.isNaN(rel)) return;
+      const d = addDays(day0El.valueAsDate, rel);
+      addRow(lbl, fmtISO(d));
+    });
+
+    copyTableBtn.addEventListener('click', async()=>{
+      const d0 = day0El.value ? `Day 0: ${day0El.value}` : 'Day 0: —';
+      const lines = [d0, ''];
+      $$('#eventsTable tbody tr').forEach(tr=>{
+        const lbl = $('.lbl', tr).value || '—';
+        const dt = $('.dt', tr).value || '—';
+        const rel = tr.dataset.rel ?? '—';
+        const sign = rel>0?'+':'';
+        lines.push(`${lbl}\t${dt}\tDay ${rel==='—'?'—':sign+rel}`);
+      });
+      await navigator.clipboard.writeText(lines.join('\n'));
+      alert('Summary copied to clipboard. You can paste into your email or notes.');
+    });
+
+    exportCSVBtn.addEventListener('click', ()=>{
+      const rows = [['Label','Date','Relative day']];
+      $$('#eventsTable tbody tr').forEach(tr=>{
+        const lbl = $('.lbl', tr).value || '';
+        const dt = $('.dt', tr).value || '';
+        const rel = tr.dataset.rel ?? '';
+        rows.push([lbl, dt, rel]);
+      });
+      const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'fungiscope_day0_timeline.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    copyLinkBtn.addEventListener('click', async()=>{
+      updateQuery();
+      await navigator.clipboard.writeText(location.href);
+      alert('Link copied. Share this in the eCRF so Day 0 is pre-filled.');
+    });
+
+    clearAllBtn.addEventListener('click', ()=>{
+      if (!confirm('Clear all rows?')) return;
+      tableBody.innerHTML='';
+      renumber();
+    });
+
+    day0El.addEventListener('input', ()=>{ $$('#eventsTable tbody tr').forEach(computeRow); updateQuery(); });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e)=>{
+      if (e.ctrlKey && e.key === 'Enter'){ e.preventDefault(); addRowBtn.click(); }
+      if (e.ctrlKey && (e.key==='l' || e.key==='L')){ e.preventDefault(); day0El.focus(); }
+      if (e.key === 'Delete'){
+        const tr = e.target?.closest?.('tr');
+        if (tr && tableBody.contains(tr)) { tr.remove(); renumber(); }
+      }
+    });
+
+    // Prefill Day 0 from URL
+    const params = new URLSearchParams(location.search);
+    const pDay0 = params.get('day0');
+    if (pDay0) day0El.value = pDay0;
+
+    // Minimal i18n
+    const L = {
+      en: {
+        header: 'FungiScope® Day 0 / Case Timeline Calculator',
+        sub: 'Quickly convert calendar dates to relative study days and vice versa. No data is uploaded; everything runs locally in your browser.',
+        day0: 'Day 0 (earliest confirmation of IC/C)',
+        newLabel: 'New event label',
+        eventDate: 'Event date',
+        add: 'Add', fromRel: 'From relative day…',
+        thIdx:'#', thLabel:'Label', thDate:'Date', thRel:'Relative day', thAct:'Actions',
+        copySummary:'Copy summary', exportCSV:'Export CSV', copyLink:'Copy link with Day 0', clearAll:'Clear all',
+        def:'Definition note: In this campaign, Day 0 is the date of the earliest confirmation of invasive candidiasis/candidemia (e.g., first lab evidence such as “yeast” reported by microbiology that triggers therapy).',
+        computeTitle:'Compute calendar date from relative day', computeSub:'Enter a label and a relative day (e.g., -3 or +14). We’ll add a row with the computed calendar date.', cancel:'Cancel', add2:'Add'
+      },
+      de: {
+        header: 'FungiScope® Day 0 / Fall‑Zeitachsen‑Rechner',
+        sub: 'Kalenderdaten schnell in relative Studientage umrechnen – und umgekehrt. Alle Daten bleiben lokal im Browser, keine Übermittlung.',
+        day0: 'Tag 0 (früheste Bestätigung von IC/C)',
+        newLabel: 'Neues Ereignis – Bezeichnung',
+        eventDate: 'Ereignisdatum',
+        add: 'Hinzufügen', fromRel: 'Aus relativem Tag…',
+        thIdx:'#', thLabel:'Bezeichnung', thDate:'Datum', thRel:'Relativer Tag', thAct:'Aktionen',
+        copySummary:'Zusammenfassung kopieren', exportCSV:'Als CSV exportieren', copyLink:'Link mit Tag 0 kopieren', clearAll:'Alles löschen',
+        def:'Hinweis: In dieser Kampagne ist Tag 0 das Datum der frühesten Bestätigung einer invasiven Candida‑Infektion / Candidämie (z. B. erster Laborhinweis „Hefe“, der die Therapie auslöst).',
+        computeTitle:'Kalenderdatum aus relativem Tag berechnen', computeSub:'Bezeichnung und relativen Tag eingeben (z. B. −3 oder +14). Wir fügen eine Zeile mit dem Datum hinzu.', cancel:'Abbrechen', add2:'Hinzufügen'
+      }
+    };
+
+    function applyLocale(loc){
+      const t = L[loc] || L.en;
+      document.title = t.header;
+      $('h1').textContent = t.header;
+      $('.sub').textContent = t.sub;
+      $('label[for="day0"]').textContent = t.day0;
+      $('label[for="localeSel"]').textContent = 'Language';
+      $('label[for="labelInput"]').textContent = t.newLabel;
+      $('label[for="dateInput"]').textContent = t.eventDate;
+      addRowBtn.textContent = t.add;
+      addDayBtn.textContent = t.fromRel;
+      $$('#eventsTable thead th')[0].textContent = t.thIdx;
+      $$('#eventsTable thead th')[1].textContent = t.thLabel;
+      $$('#eventsTable thead th')[2].textContent = t.thDate;
+      $$('#eventsTable thead th')[3].textContent = t.thRel;
+      $$('#eventsTable thead th')[4].textContent = t.thAct;
+      copyTableBtn.textContent = t.copySummary;
+      exportCSVBtn.textContent = t.exportCSV;
+      copyLinkBtn.textContent = t.copyLink;
+      clearAllBtn.textContent = t.clearAll;
+      $('.footer div:nth-child(2)').textContent = t.def;
+      $('#fromDayDialog h3').textContent = t.computeTitle;
+      $('#fromDayDialog p').textContent = t.computeSub;
+      $('#fromDayDialog [value="cancel"]').textContent = t.cancel;
+      $('#fromDayDialog [value="ok"]').textContent = t.add2;
+    }
+
+    localeSel.addEventListener('change', ()=>applyLocale(localeSel.value));
+    applyLocale(localeSel.value);
+  </script>
+</body>
+</html>
