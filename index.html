@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>FungiScope® Day Counter</title>
+<style>
+    :root{--bg:#f4f6fb;--card:#ffffff;--muted:#5b677a;--text:#111827;--accent:#2a5dff;--accent-2:#12b981;--line:#d6dae5;--danger:#e11d48}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .container{max-width:1100px;margin:0 auto;padding:28px}
+    .card{background:var(--card);border:1px solid var(--line);box-shadow:0 10px 24px rgba(17,24,39,.08);border-radius:14px;padding:22px}
+    h1{font-size:clamp(22px,3vw,30px);margin:0 0 6px}
+    p.sub{margin:0 0 14px;color:var(--muted)}
+    .row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+
+    /* Inputs */
+    input[type="date"], input[type="text"], input[type="number"], select{background:#fff;color:var(--text);border:1px solid #9aa4b2;border-radius:10px;padding:10px 12px;outline:none;min-height:42px;font-size:14px}
+    input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(42,93,255,.18)}
+    /* Make date picker icon high-contrast & visible on all platforms */
+    input[type="date"]::-webkit-calendar-picker-indicator{filter:none;opacity:1;cursor:pointer;background-color:#fff;border-radius:4px;padding:2px}
+    input[type="date"]::-webkit-datetime-edit{color:var(--text)}
+    input[type="date"]::-webkit-datetime-edit-text{color:#6b7280}
+    input[type="date"]{background-image:none}
+
+    .btn{appearance:none;border:none;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;transition:transform .05s ease, box-shadow .2s}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(42,93,255,.28)}
+    .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
+    .btn-danger{background:var(--danger);color:#fff}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:12px}
+    thead th{position:sticky;top:0;background:#f9fafc;z-index:1}
+    th, td{border-bottom:1px solid var(--line);padding:10px;text-align:left}
+    tr:hover td{background:#f3f6ff}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .col-6{grid-column:span 6}
+    .col-12{grid-column:span 12}
+    @media (max-width:900px){.col-6{grid-column:span 12}}
+    .help{font-size:12px;color:var(--muted)}
+    .kbd{font-family:ui-monospace, monospace;border:1px solid var(--line);padding:0 6px;border-radius:6px}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:#374151;background:#fff}
+    .footer{margin-top:16px;font-size:12px;color:var(--muted)}
+    .sep{height:1px;background:var(--line);margin:16px 0}
+
+    dialog{border:1px solid var(--line);border-radius:12px;padding:18px;max-width:520px}
+    dialog::backdrop{background:rgba(0,0,0,.25)}
+  </style>
+</head>
+<body>
+<div class="container">
+<div class="card">
+<h1 id="header"></h1>
+<p class="sub" id="sub"></p>
+<div class="grid">
+<div class="col-6">
+<label for="day0" id="lblDay0"></label>
+<input id="day0" type="date"/>
+<div class="help" id="helpDay0"></div>
+</div>
+<div class="col-6">
+<label for="localeSel">Language</label>
+<select id="localeSel">
+<option value="en">English</option>
+<option value="de">Deutsch</option>
+<option value="es">Español</option>
+<option value="it">Italiano</option>
+<option value="ru">Русский</option>
+</select>
+</div>
+</div>
+<div style="margin:18px 0; padding:12px 16px; background:#fff8f8; border:1px solid #f5c2c7; border-radius:10px; font-size:15px; line-height:1.5; color:#b91c1c;">
+⚠️ <strong>Day 0</strong> is the date of the earliest <em>Candida</em> report from the laboratory. 
+This does not need to be a final species identification; it may also be a preliminary lab call 
+(e.g., “yeast seen under the microscope”), providing the physician with evidence to start 
+antifungal treatment. <br/><br/>
+If the patient dies before any report is issued, the date of death is considered Day 0. 
+<strong>Important:</strong> the sample collection date is <u>not</u> Day 0.
+</div><div class="sep"></div>
+<div class="row">
+<div>
+<label id="lblNewEvent"></label>
+<input id="labelInput" placeholder="" type="text"/>
+</div>
+<div>
+<label id="lblEventDate"></label>
+<input id="dateInput" type="date"/>
+</div>
+<button class="btn btn-primary" id="addRowBtn" type="button"></button>
+<button class="btn btn-ghost" id="addDayBtn" type="button"></button>
+</div>
+<table id="eventsTable">
+<thead>
+<tr>
+<th>#</th>
+<th id="thLabel"></th>
+<th id="thDate"></th>
+<th id="thRel"></th>
+<th id="thAct"></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+<div class="sep"></div>
+<div class="toolbar">
+<button class="btn btn-ghost" id="copyTable" type="button"></button>
+<button class="btn btn-ghost" id="exportCSV" type="button"></button>
+<button class="btn btn-ghost" id="copyLink" type="button"></button>
+<button class="btn btn-danger" id="clearAll" type="button"></button>
+</div>
+<div class="footer" id="footerNote"></div>
+</div>
+</div>
+<dialog id="fromDayDialog">
+<form method="dialog">
+<h3 id="dlgTitle" style="margin:0 0 6px"></h3>
+<p class="muted" id="dlgSub" style="margin:0 0 12px"></p>
+<div class="row" style="margin-bottom:12px">
+<div>
+<label id="dlgLbl"></label>
+<input id="fromDayLabel" type="text"/>
+</div>
+<div>
+<label id="dlgRel"></label>
+<input id="fromDayValue" step="1" type="number"/>
+</div>
+</div>
+<div style="display:flex;gap:8px;justify-content:flex-end">
+<button class="btn btn-ghost" id="dlgCancel" value="cancel">Cancel</button>
+<button class="btn btn-primary" id="dlgOk" value="ok">Add</button>
+</div>
+</form>
+</dialog>
+<template id="rowTpl">
+<tr>
+<td class="idx"></td>
+<td><input class="lbl" placeholder="" type="text"/></td>
+<td><input class="dt" type="date"/></td>
+<td class="rd"><span class="pill">Day <strong>0</strong></span></td>
+<td>
+<button class="btn btn-ghost act-copy" title="Copy" type="button">Copy</button>
+<button class="btn btn-ghost act-dup" title="Duplicate" type="button">Duplicate</button>
+<button class="btn btn-danger act-del" title="Delete" type="button">Delete</button>
+</td>
+</tr>
+</template>
+<script>
+    const $ = (s, el=document) => el.querySelector(s);
+    const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+
+    const day0El = $('#day0');
+    const tableBody = $('#eventsTable tbody');
+    const labelInput = $('#labelInput');
+    const dateInput = $('#dateInput');
+    const addRowBtn = $('#addRowBtn');
+    const addDayBtn = $('#addDayBtn');
+    const copyTableBtn = $('#copyTable');
+    const exportCSVBtn = $('#exportCSV');
+    const copyLinkBtn = $('#copyLink');
+    const clearAllBtn = $('#clearAll');
+    const localeSel = $('#localeSel');
+
+    const dialog = $('#fromDayDialog');
+    const fromDayLabel = $('#fromDayLabel');
+    const fromDayValue = $('#fromDayValue');
+
+    // i18n dictionary (EN, DE, ES, IT, RU)
+    const L = {
+      en:{header:"FungiScope® Day 0 / Case Timeline Calculator",sub:"Quickly convert calendar dates to relative study days and vice versa. No data is uploaded; everything runs locally in your browser.",lblDay0:"Day 0 (earliest confirmation of IC/C)",helpDay0:"Tip: Share a link with pre-filled Day 0.",lblNewEvent:"New event label",lblEventDate:"Event date",add:"Add",fromRel:"From relative day…",thLabel:"Label",thDate:"Date",thRel:"Relative day",thAct:"Actions",copySummary:"Copy summary",exportCSV:"Export CSV",copyLink:"Copy link with Day 0",clearAll:"Clear all",footer:"⚠️Day 0 is the date the physician is first informed of Candida/yeast positivity. This can be a preliminary lab call (e.g., yeast seen under the microscope) or a final culture result. If the patient dies before any report is given, the date of death is Day 0. Important: the sample collection date is not Day 0.",phLabel:"e.g., Blood sample collected",dlgTitle:"Compute calendar date from relative day",dlgSub:"Enter a label and a relative day (e.g., -3 or +14). We'll add a row with the computed calendar date.",dlgLbl:"Label",dlgRel:"Relative day",dlgCancel:"Cancel",dlgOk:"Add",copyRow:"Copied!"},
+      de:{header:"FungiScope® Tag 0 / Zeitachsen‑Rechner",sub:"Kalenderdaten in relative Studientage umrechnen und umgekehrt. Es werden keine Daten hochgeladen; alles läuft lokal in Ihrem Browser.",lblDay0:"Tag 0 (früheste Bestätigung von IC/C)",helpDay0:"Hinweis: Link mit vorausgefülltem Tag 0 teilen.",lblNewEvent:"Neues Ereignis – Bezeichnung",lblEventDate:"Ereignisdatum",add:"Hinzufügen",fromRel:"Aus relativem Tag…",thLabel:"Bezeichnung",thDate:"Datum",thRel:"Relativer Tag",thAct:"Aktionen",copySummary:"Zusammenfassung kopieren",exportCSV:"Als CSV exportieren",copyLink:"Link mit Tag 0 kopieren",clearAll:"Alles löschen",footer:"⚠️Tag 0 ist der Tag, an dem der behandelnde Arzt erstmals über eine Candida/Hefepositivität informiert wird. Dies kann ein vorläufiger Laborruf (z. B. Hefen im Mikroskop) oder ein endgültiges Kulturergebnis sein. Wenn der Patient vor jeglicher Mitteilung verstirbt, ist das Sterbedatum Tag 0. Wichtig: Das Probendatum ist nicht Tag 0.",phLabel:"z. B. Blutprobe entnommen",dlgTitle:"Kalenderdatum aus relativem Tag berechnen",dlgSub:"Bezeichnung und relativen Tag eingeben (z. B. −3 oder +14).",dlgLbl:"Bezeichnung",dlgRel:"Relativer Tag",dlgCancel:"Abbrechen",dlgOk:"Hinzufügen",copyRow:"Kopiert!"},
+      es:{header:"FungiScope® Día 0 / Calculadora de cronología",sub:"Convierte las fechas del calendario en días relativos del estudio y viceversa. No se cargan datos; todo se ejecuta localmente en su navegador.",lblDay0:"Día 0 (confirmación más temprana de IC/C)",helpDay0:"Consejo: comparte un enlace con Día 0 prellenado.",lblNewEvent:"Nueva etiqueta de evento",lblEventDate:"Fecha del evento",add:"Añadir",fromRel:"Desde día relativo…",thLabel:"Etiqueta",thDate:"Fecha",thRel:"Día relativo",thAct:"Acciones",copySummary:"Copiar resumen",exportCSV:"Exportar CSV",copyLink:"Copiar enlace con Día 0",clearAll:"Borrar todo",footer:"⚠️El Día 0 es la fecha en que el médico es informado por primera vez de la positividad de Candida/levadura. Puede ser una llamada preliminar de laboratorio (p. ej., levaduras observadas al microscopio) o un resultado final de cultivo. Si el paciente muere antes de cualquier informe, la fecha de fallecimiento es el Día 0. Importante: la fecha de recogida de la muestra no es el Día 0.",phLabel:"p. ej., Muestra de sangre tomada",dlgTitle:"Calcular fecha desde día relativo",dlgSub:"Introduce una etiqueta y un día relativo (p. ej., −3 o +14).",dlgLbl:"Etiqueta",dlgRel:"Día relativo",dlgCancel:"Cancelar",dlgOk:"Añadir",copyRow:"¡Copiado!"},
+      it:{header:"FungiScope® Giorno 0 / Calcolatore di cronologia",sub:"Converti rapidamente le date del calendario in giorni relativi dello studio e viceversa. Nessun dato viene caricato; tutto avviene localmente nel browser.",lblDay0:"Giorno 0 (prima conferma di IC/C)",helpDay0:"Suggerimento: condividi un link con il Giorno 0 precompilato.",lblNewEvent:"Nuova etichetta evento",lblEventDate:"Data evento",add:"Aggiungi",fromRel:"Da giorno relativo…",thLabel:"Etichetta",thDate:"Data",thRel:"Giorno relativo",thAct:"Azioni",copySummary:"Copia riepilogo",exportCSV:"Esporta CSV",copyLink:"Copia link con Giorno 0",clearAll:"Cancella tutto",footer:"⚠️Il Giorno 0 è la data in cui il medico viene informato per la prima volta della positività a Candida/lievito. Può essere una chiamata preliminare del laboratorio (es. lieviti osservati al microscopio) o un risultato finale della coltura. Se il paziente muore prima di qualsiasi comunicazione, la data del decesso è il Giorno 0. Importante: la data di raccolta del campione non è il Giorno 0.",phLabel:"es.: Prelievo di sangue eseguito",dlgTitle:"Calcola data da giorno relativo",dlgSub:"Inserisci un’etichetta e un giorno relativo (es. −3 o +14).",dlgLbl:"Etichetta",dlgRel:"Giorno relativo",dlgCancel:"Annulla",dlgOk:"Aggiungi",copyRow:"Copiato!"},
+      ru:{header:"FungiScope® День 0 / Калькулятор хронологии",sub:"Быстро конвертируйте календарные даты в относительные дни исследования и обратно. Данные не загружаются; всё работает локально в вашем браузере.",lblDay0:"День 0 (первое подтверждение IC/C)",helpDay0:"Совет: поделитесь ссылкой с предзаполненным Днём 0.",lblNewEvent:"Метка события",lblEventDate:"Дата события",add:"Добавить",fromRel:"Из относительного дня…",thLabel:"Метка",thDate:"Дата",thRel:"Относительный день",thAct:"Действия",copySummary:"Скопировать сводку",exportCSV:"Экспорт CSV",copyLink:"Ссылка с Днём 0",clearAll:"Очистить всё",footer:"⚠️День 0 — это дата, когда врач впервые информируется о положительном результате на Candida/дрожжи. Это может быть предварительный звонок из лаборатории (напр., обнаружение дрожжей под микроскопом) или окончательный результат посева. Если пациент умирает до любого сообщения, датой смерти считается День 0. Важно: дата взятия образца не является Днём 0.",phLabel:"напр., Взятие образца крови",dlgTitle:"Вычислить дату из относительного дня",dlgSub:"Введите метку и относительный день (напр., −3 или +14).",dlgLbl:"Метка",dlgRel:"Относительный день",dlgCancel:"Отмена",dlgOk:"Добавить",copyRow:"Скопировано!"}
+    };
+
+    function i18n(){ return L[localeSel.value] || L.en; }
+
+    function applyLocale(){
+      const t = i18n();
+      $('#header').textContent = t.header;
+      $('#sub').textContent = t.sub;
+      $('#lblDay0').textContent = t.lblDay0;
+      $('#helpDay0').textContent = t.helpDay0;
+      $('#lblNewEvent').textContent = t.lblNewEvent;
+      $('#lblEventDate').textContent = t.lblEventDate;
+      addRowBtn.textContent = t.add;
+      addDayBtn.textContent = t.fromRel;
+      $('#thLabel').textContent = t.thLabel;
+      $('#thDate').textContent = t.thDate;
+      $('#thRel').textContent = t.thRel;
+      $('#thAct').textContent = t.thAct;
+      copyTableBtn.textContent = t.copySummary;
+      exportCSVBtn.textContent = t.exportCSV;
+      copyLinkBtn.textContent = t.copyLink;
+      clearAllBtn.textContent = t.clearAll;
+      $('#footerNote').textContent = t.footer;
+      labelInput.placeholder = t.phLabel;
+      $$('#eventsTable .lbl').forEach(el => el.placeholder = t.phLabel);
+      // Recompute rows so the "Day" label stays correct in the selected language
+      $$('#eventsTable tbody tr').forEach(computeRow);
+    }
+
+    localeSel.addEventListener('change', ()=>{
+      const url = new URL(location.href);
+      url.searchParams.set('lang', localeSel.value);
+      history.replaceState(null,'',url);
+      applyLocale();
+    });
+
+    // Date helpers
+    const toDateOnly = d => { if(!d) return null; const x=new Date(d); return new Date(x.getFullYear(),x.getMonth(),x.getDate()); };
+    const fmtISO = d => { if(!d) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const da=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${da}`};
+    const diffDays = (a,b) => Math.round((toDateOnly(b)-toDateOnly(a))/86400000);
+    const addDays = (d,n) => { const b=toDateOnly(d); const r=new Date(b); r.setDate(r.getDate()+Number(n)); return r; };
+
+    function renumber(){ $$('#eventsTable tbody tr').forEach((tr,i)=>$('.idx',tr).textContent=i+1); }
+
+    function computeRow(tr){
+      const d0=day0El.valueAsDate, dt=$('.dt',tr).valueAsDate, cell=$('.rd',tr);
+      if(!d0 || !dt){ cell.innerHTML='<span class="muted">—</span>'; tr.dataset.rel=''; return; }
+      const rel=diffDays(d0,dt); const sign=rel>0?'+':''; cell.innerHTML=`<span class="pill">Day <strong>${sign}${rel}</strong></span>`; tr.dataset.rel=rel;
+    }
+
+    function addRow(lbl='', dateStr=''){
+      const tpl=$('#rowTpl').content.cloneNode(true); const tr=tpl.querySelector('tr');
+      $('.lbl',tr).value=lbl; $('.lbl',tr).placeholder=i18n().phLabel; $('.dt',tr).value=dateStr;
+      $('.dt',tr).addEventListener('input', ()=>computeRow(tr));
+      $('.act-del',tr).addEventListener('click', ()=>{ tr.remove(); renumber(); });
+      $('.act-dup',tr).addEventListener('click', ()=> addRow($('.lbl',tr).value,$('.dt',tr).value));
+      $('.act-copy',tr).addEventListener('click', async()=>{ const rel=tr.dataset.rel??''; if(rel==='') return; const sign=rel>0?'+':''; await navigator.clipboard.writeText(`Day ${sign}${rel}`); const old=$('.act-copy',tr).textContent; $('.act-copy',tr).textContent=i18n().copyRow; setTimeout(()=>$('.act-copy',tr).textContent=old,900); });
+      tableBody.appendChild(tr); computeRow(tr); renumber();
+    }
+
+    addRowBtn.addEventListener('click', ()=>{ addRow(labelInput.value.trim(), dateInput.value); labelInput.value=''; dateInput.value=''; labelInput.focus(); });
+
+    addDayBtn.addEventListener('click', ()=>{ if(!day0El.value){ alert('Please set Day 0 first.'); return; } applyLocale(); dialog.showModal(); fromDayLabel.value=''; fromDayValue.value=''; setTimeout(()=>fromDayLabel.focus(), 10); });
+
+    dialog.addEventListener('close', ()=>{ if(dialog.returnValue!=='ok') return; const lbl=fromDayLabel.value.trim()||i18n().lblNewEvent; const rel=parseInt(fromDayValue.value,10); if(Number.isNaN(rel)) return; const d=addDays(day0El.valueAsDate,rel); addRow(lbl, fmtISO(d)); });
+
+    copyTableBtn.addEventListener('click', async()=>{
+      const lines = [day0El.value ? `Day 0: ${day0El.value}` : 'Day 0: —', ''];
+      $$('#eventsTable tbody tr').forEach(tr=>{ const lbl=$('.lbl',tr).value||'—'; const dt=$('.dt',tr).value||'—'; const rel=tr.dataset.rel??'—'; const sign=rel>0?'+':''; lines.push(`${lbl}\t${dt}\tDay ${rel==='—'?'—':sign+rel}`); });
+      await navigator.clipboard.writeText(lines.join('\n'));
+      alert('Summary copied to clipboard.');
+    });
+
+    exportCSVBtn.addEventListener('click', ()=>{
+      const rows=[[i18n().thLabel,i18n().thDate,i18n().thRel]];
+      $$('#eventsTable tbody tr').forEach(tr=>{ rows.push([$('.lbl',tr).value||'', $('.dt',tr).value||'', tr.dataset.rel??'']); });
+      const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fungiscope_day0_timeline.csv'; a.click(); URL.revokeObjectURL(a.href);
+    });
+
+    function updateQuery(){ const d0=day0El.value; const url=new URL(location.href); if(d0) url.searchParams.set('day0',d0); else url.searchParams.delete('day0'); history.replaceState(null,'',url); }
+    copyLinkBtn.addEventListener('click', async()=>{ updateQuery(); await navigator.clipboard.writeText(location.href); alert('Link copied.'); });
+
+    clearAllBtn.addEventListener('click', ()=>{ if(!confirm('Clear all rows?'))return; tableBody.innerHTML=''; renumber(); });
+
+    day0El.addEventListener('input', ()=>{ $$('#eventsTable tbody tr').forEach(computeRow); updateQuery(); });
+
+    // Prefill from URL and language
+    const params=new URLSearchParams(location.search); const pDay0=params.get('day0'); const pLang=params.get('lang'); if(pDay0) day0El.value=pDay0; if(pLang && L[pLang]) localeSel.value=pLang;
+
+    // Apply locale at startup so labels show correctly
+    applyLocale();
+  </script>
+</body>
+</html>
